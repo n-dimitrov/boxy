@@ -165,17 +165,6 @@
     box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
   }
 
-  #info {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    min-width: 180px;
-    text-align: center;
-  }
 
   .controls-group {
     display: flex;
@@ -539,8 +528,7 @@
     <input type="color" id="colorPicker" value="#667eea">
   </div>
 
-
-  <div id="info">✨ Select a rectangle to see options</div>
+  <button id="toggleDimensions" class="btn btn-primary">Show</button>
 </div>
 
 <div class="canvas-container">
@@ -615,7 +603,6 @@ const ctx = canvas.getContext("2d");
 const addBtn = document.getElementById("addRect");
 const deleteBtn = document.getElementById("deleteRect");
 const colorPicker = document.getElementById("colorPicker");
-const info = document.getElementById("info");
 const zoomInBtn = document.getElementById("zoomIn");
 const zoomOutBtn = document.getElementById("zoomOut");
 const zoomLevelDisplay = document.getElementById("zoomLevel");
@@ -632,6 +619,7 @@ const rectangleHeightInput = document.getElementById("rectangleHeight");
 const applyRectangleBtn = document.getElementById("applyRectangle");
 const cancelRectangleBtn = document.getElementById("cancelRectangle");
 const rectanglePopup = document.getElementById("rectanglePopup");
+const toggleDimensionsBtn = document.getElementById("toggleDimensions");
 
 let rectangles = [];
 let selected = null;
@@ -641,6 +629,7 @@ let dragging = false;
 let zoom = 1.0;
 let panX = 0;
 let panY = 0;
+let showAllDimensions = false; // Global toggle for showing dimensions
 
 const HANDLE_SIZE = 10;
 
@@ -831,8 +820,9 @@ function drawRectangle(r, isSelected = false) {
 }
 
 function drawDimensions(r, isActive = false) {
-  // Only show dimensions for the selected rectangle
-  if (r !== selected) return;
+  // Show dimensions based on global toggle OR if it's selected rectangle during manipulation
+  const shouldShow = showAllDimensions || (r === selected && isActive);
+  if (!shouldShow) return;
 
   ctx.save();
   ctx.scale(zoom, zoom);
@@ -897,8 +887,9 @@ function draw() {
 
   for (const r of rectangles) {
     drawRectangle(r, r === selected);
-    // Show dimensions for selected rectangle, with active state during manipulation
-    drawDimensions(r, resizing || dragging);
+    // Show dimensions based on global toggle or active manipulation
+    const isActiveManipulation = (r === selected && (resizing || dragging));
+    drawDimensions(r, isActiveManipulation);
   }
 }
 
@@ -915,27 +906,9 @@ function hitTest(screenX, screenY) {
   return null;
 }
 
-function updateInfo() {
-  if (!selected) {
-    info.textContent = "✨ Select a rectangle to see dimensions";
-    info.style.background = "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)";
-    info.style.cursor = "default";
-    return;
-  }
-
-  // Convert pixels to millimeters and show current dimensions
-  const wMm = pixelsToMm(selected.w);
-  const hMm = pixelsToMm(selected.h);
-  info.textContent = `📐 ${wMm.toFixed(1)} mm × ${hMm.toFixed(1)} mm`;
-  info.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-  info.style.cursor = "pointer";
-  info.title = "Click to edit dimensions";
-}
-
 function selectRectangle(r) {
   selected = r;
   draw();
-  updateInfo();
   if (selected && /^#[0-9a-f]{6}$/i.test(selected.color)) {
     colorPicker.value = selected.color;
   }
@@ -1065,6 +1038,20 @@ function onMouseUp() {
   canvas.style.cursor = "default";
 }
 
+function onDoubleClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const screenX = e.clientX - rect.left;
+  const screenY = e.clientY - rect.top;
+  const r = hitTest(screenX, screenY);
+
+  if (r) {
+    // Select the rectangle and show its dimension popup
+    selected = r;
+    selectRectangle(r);
+    showRectanglePopup();
+  }
+}
+
 // --- Toolbar actions ---
 
 addBtn.onclick = () => {
@@ -1158,12 +1145,11 @@ workspaceInfo.onclick = () => {
   showWorkspacePopup();
 };
 
-// Add click handler for toolbar dimensions
-info.onclick = (e) => {
-  e.stopPropagation();
-  if (selected && info.style.cursor === "pointer") {
-    showRectanglePopup();
-  }
+// Global dimensions toggle button
+toggleDimensionsBtn.onclick = () => {
+  showAllDimensions = !showAllDimensions;
+  toggleDimensionsBtn.textContent = showAllDimensions ? "Hide" : "Show";
+  draw();
 };
 
 applyWorkspaceBtn.onclick = () => {
@@ -1256,6 +1242,7 @@ canvas.addEventListener("mousedown", onMouseDown);
 canvas.addEventListener("mousemove", onMouseMove);
 canvas.addEventListener("mouseup", onMouseUp);
 canvas.addEventListener("mouseleave", onMouseUp);
+canvas.addEventListener("dblclick", onDoubleClick);
 
 // Touch support for mobile
 canvas.addEventListener("touchstart", (e) => {
