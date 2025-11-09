@@ -883,6 +883,153 @@ function drawDimensions(r, isActive = false) {
   ctx.restore();
 }
 
+function drawDistanceIndicators(r) {
+  // Show distance indicators for selected box during selection, dragging, or resizing
+  if (r !== selected) return;
+
+  ctx.save();
+  ctx.scale(zoom, zoom);
+  ctx.translate(panX / zoom, panY / zoom);
+
+  const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
+  const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
+
+  // Calculate distances to workspace edges
+  const distanceLeft = pixelsToMm(r.x);
+  const distanceTop = pixelsToMm(r.y);
+  const distanceRight = pixelsToMm(workspaceWidth - (r.x + r.w));
+  const distanceBottom = pixelsToMm(workspaceHeight - (r.y + r.h));
+
+  // Style for distance indicators
+  const fontSize = Math.max(9, 10 / zoom);
+  ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const padding = 3 / zoom;
+  const lineWidth = 1 / zoom;
+
+  // Colors for different distance indicators
+  const distanceColor = "rgba(16, 185, 129, 0.9)"; // Green for distances
+  const lineColor = "rgba(16, 185, 129, 0.6)";
+  const textColor = "white";
+
+  // Helper function to draw distance indicator
+  function drawDistance(x1, y1, x2, y2, text, labelX, labelY) {
+    // Draw dashed line with slight glow
+    ctx.shadowColor = lineColor;
+    ctx.shadowBlur = 2 / zoom;
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = lineWidth;
+    ctx.setLineDash([4 / zoom, 3 / zoom]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset dash
+    ctx.shadowBlur = 0; // Reset shadow
+
+    // Draw end arrows for better visual guidance
+    const arrowSize = 3 / zoom;
+    const isHorizontal = Math.abs(x2 - x1) > Math.abs(y2 - y1);
+
+    ctx.fillStyle = lineColor;
+    if (isHorizontal) {
+      // Horizontal line - draw vertical arrows at ends
+      // Left arrow
+      ctx.beginPath();
+      ctx.moveTo(x1, y1 - arrowSize);
+      ctx.lineTo(x1, y1 + arrowSize);
+      ctx.stroke();
+      // Right arrow
+      ctx.beginPath();
+      ctx.moveTo(x2, y2 - arrowSize);
+      ctx.lineTo(x2, y2 + arrowSize);
+      ctx.stroke();
+    } else {
+      // Vertical line - draw horizontal arrows at ends
+      // Top arrow
+      ctx.beginPath();
+      ctx.moveTo(x1 - arrowSize, y1);
+      ctx.lineTo(x1 + arrowSize, y1);
+      ctx.stroke();
+      // Bottom arrow
+      ctx.beginPath();
+      ctx.moveTo(x2 - arrowSize, y2);
+      ctx.lineTo(x2 + arrowSize, y2);
+      ctx.stroke();
+    }
+
+    // Draw rounded text background with subtle shadow
+    const textMetrics = ctx.measureText(text);
+    const rectWidth = textMetrics.width + padding * 2;
+    const rectHeight = fontSize + padding * 2;
+    const rectX = labelX - rectWidth / 2;
+    const rectY = labelY - rectHeight / 2;
+
+    // Background shadow
+    ctx.shadowColor = "rgba(0, 0, 0, 0.15)";
+    ctx.shadowBlur = 4 / zoom;
+    ctx.shadowOffsetX = 1 / zoom;
+    ctx.shadowOffsetY = 1 / zoom;
+
+    // Draw rounded rectangle background (with fallback for older browsers)
+    ctx.fillStyle = distanceColor;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(rectX, rectY, rectWidth, rectHeight, 3 / zoom);
+    } else {
+      // Fallback to regular rectangle for older browsers
+      ctx.rect(rectX, rectY, rectWidth, rectHeight);
+    }
+    ctx.fill();
+
+    // Reset shadow
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Draw text with slight emboss effect
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillText(text, labelX + 0.5 / zoom, labelY + 0.5 / zoom);
+    ctx.fillStyle = textColor;
+    ctx.fillText(text, labelX, labelY);
+  }
+
+  // Left distance indicator
+  if (r.x > 0) {
+    const leftText = `${distanceLeft.toFixed(1)}mm`;
+    const midY = r.y + r.h / 2;
+    drawDistance(0, midY, r.x, midY, leftText, r.x / 2, midY);
+  }
+
+  // Right distance indicator
+  if (r.x + r.w < workspaceWidth) {
+    const rightText = `${distanceRight.toFixed(1)}mm`;
+    const midY = r.y + r.h / 2;
+    const startX = r.x + r.w;
+    drawDistance(startX, midY, workspaceWidth, midY, rightText, startX + (workspaceWidth - startX) / 2, midY);
+  }
+
+  // Top distance indicator
+  if (r.y > 0) {
+    const topText = `${distanceTop.toFixed(1)}mm`;
+    const midX = r.x + r.w / 2;
+    drawDistance(midX, 0, midX, r.y, topText, midX, r.y / 2);
+  }
+
+  // Bottom distance indicator
+  if (r.y + r.h < workspaceHeight) {
+    const bottomText = `${distanceBottom.toFixed(1)}mm`;
+    const midX = r.x + r.w / 2;
+    const startY = r.y + r.h;
+    drawDistance(midX, startY, midX, workspaceHeight, bottomText, midX, startY + (workspaceHeight - startY) / 2);
+  }
+
+  ctx.restore();
+}
+
 function draw() {
   drawGrid();
 
@@ -891,6 +1038,9 @@ function draw() {
     // Show dimensions based on global toggle or active manipulation
     const isActiveManipulation = (r === selected && (resizing || dragging));
     drawDimensions(r, isActiveManipulation);
+
+    // Show distance indicators when dragging or resizing selected box
+    drawDistanceIndicators(r);
   }
 }
 
