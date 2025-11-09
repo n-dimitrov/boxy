@@ -60,7 +60,7 @@ const deleteBtn = document.getElementById("deleteRect");
 const colorPicker = document.getElementById("colorPicker");
 const info = document.getElementById("info");
 
-let rectangles = [];
+let boxes = [];
 let selected = null;
 let dragOffset = { x: 0, y: 0 };
 let resizing = false;
@@ -114,7 +114,7 @@ function drawGrid() {
 function draw() {
   drawGrid();
 
-  for (const r of rectangles) {
+  for (const r of boxes) {
     ctx.fillStyle = r.color;
     ctx.fillRect(r.x, r.y, r.w, r.h);
 
@@ -137,8 +137,8 @@ function draw() {
 }
 
 function hitTest(x, y) {
-  for (let i = rectangles.length - 1; i >= 0; i--) {
-    const r = rectangles[i];
+  for (let i = boxes.length - 1; i >= 0; i--) {
+    const r = boxes[i];
     if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
       return r;
     }
@@ -156,7 +156,7 @@ function updateInfo() {
   info.textContent = `Selected: ${wMm} mm × ${hMm} mm`;
 }
 
-function selectRectangle(r) {
+function selectBox(r) {
   selected = r;
   draw();
   updateInfo();
@@ -186,7 +186,7 @@ function onMouseDown(e) {
     selected = null;
     resizing = false;
   }
-  selectRectangle(selected);
+  selectBox(selected);
 }
 
 function onMouseMove(e) {
@@ -223,13 +223,13 @@ addBtn.onclick = () => {
     h: 80,
     color
   };
-  rectangles.push(r);
-  selectRectangle(r);
+  boxes.push(r);
+  selectBox(r);
 };
 
 deleteBtn.onclick = () => {
   if (!selected) return;
-  rectangles = rectangles.filter(r => r !== selected);
+  boxes = boxes.filter(r => r !== selected);
   selected = null;
   draw();
   updateInfo();

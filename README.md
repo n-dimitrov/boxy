@@ -1,6 +1,6 @@
 # 🟦 Boxy
 
-**Boxy** is a lightweight web playground for creating, moving, resizing, and coloring rectangles on an interactive HTML canvas.
+**Boxy** is a lightweight web playground for creating, moving, resizing, and coloring boxes on an interactive HTML canvas.
 
 Perfect for experimenting with layout ideas, visual planning, or just having fun drawing boxes.
 
@@ -8,11 +8,11 @@ Perfect for experimenting with layout ideas, visual planning, or just having fun
 
 ## 🚀 Features
 
-- ✏️ Add rectangles to the canvas  
-- 🎨 Change their color using a color picker  
-- ↔️ Move and resize rectangles freely  
-- 📏 See rectangle dimensions in **millimeters (mm)**  
-- ❌ Delete selected rectangles  
+- ✏️ Add boxes to the canvas
+- 🎨 Change their color using a color picker
+- ↔️ Move and resize boxes freely
+- 📏 See box dimensions in **millimeters (mm)**
+- ❌ Delete selected boxes  
 - 🧭 Minimal, zero-dependency interface
 
 ---
@@ -21,7 +21,7 @@ Perfect for experimenting with layout ideas, visual planning, or just having fun
 
 Boxy uses a standard HTML5 `<canvas>` element with pure JavaScript for interactivity.
 
-- Each rectangle has:
+- Each box has:
   ```js
   { x, y, w, h, color }
 
@@ -36,9 +36,9 @@ Boxy uses a standard HTML5 `<canvas>` element with pure JavaScript for interacti
 🪄 Controls
 
 Action	Description
-🖱️ Click + drag	Move selected rectangle
-↘️ Drag small corner square	Resize selected rectangle
-➕ Add Rectangle	Creates a new box
+🖱️ Click + drag	Move selected box
+↘️ Drag small corner square	Resize selected box
+➕ Add Box	Creates a new box
 🎨 Color Picker	Change color of selected box
 🗑️ Delete Selected	Remove current box
 📐 Size display	Shown in top bar in mm

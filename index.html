@@ -213,11 +213,11 @@
     }
   }
 
-  .rectangle-animation {
-    animation: rectangleAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  .box-animation {
+    animation: boxAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
-  @keyframes rectangleAppear {
+  @keyframes boxAppear {
     from {
       transform: scale(0);
       opacity: 0;
@@ -514,7 +514,7 @@
 
 <div class="header fade-in">
   <h1>🟦 Boxy</h1>
-  <p>Modern Canvas Playground for Creative Rectangle Design</p>
+  <p>Modern Canvas Playground for Creative Box Design</p>
 </div>
 
 <div id="toolbar" class="fade-in">
@@ -573,10 +573,10 @@
   </div>
 </div>
 
-<!-- Rectangle Dimension Popup -->
+<!-- Box Dimension Popup -->
 <div id="rectanglePopup" class="workspace-popup">
   <div class="workspace-modal">
-    <h3>📏 Rectangle Dimensions</h3>
+    <h3>📏 Box Dimensions</h3>
     <div class="workspace-form">
       <div class="workspace-input-group">
         <label>Width:</label>
@@ -621,7 +621,7 @@ const cancelRectangleBtn = document.getElementById("cancelRectangle");
 const rectanglePopup = document.getElementById("rectanglePopup");
 const toggleDimensionsBtn = document.getElementById("toggleDimensions");
 
-let rectangles = [];
+let boxes = [];
 let selected = null;
 let dragOffset = { x: 0, y: 0 };
 let resizing = false;
@@ -769,20 +769,20 @@ function drawGrid() {
 }
 
 function drawRectangle(r, isSelected = false) {
-  // Apply zoom and pan transform for rectangles
+  // Apply zoom and pan transform for boxes
   ctx.save();
   ctx.scale(zoom, zoom);
   ctx.translate(panX / zoom, panY / zoom);
 
   if (isSelected) {
-    // Glow effect for selected rectangle
+    // Glow effect for selected box
     ctx.shadowColor = "rgba(102, 126, 234, 0.4)";
     ctx.shadowBlur = 20 / zoom;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
   }
 
-  // Main rectangle
+  // Main box
   ctx.fillStyle = r.color;
   ctx.fillRect(r.x, r.y, r.w, r.h);
 
@@ -820,7 +820,7 @@ function drawRectangle(r, isSelected = false) {
 }
 
 function drawDimensions(r, isActive = false) {
-  // Show dimensions based on global toggle OR if it's selected rectangle during manipulation
+  // Show dimensions based on global toggle OR if it's selected box during manipulation
   const shouldShow = showAllDimensions || (r === selected && isActive);
   if (!shouldShow) return;
 
@@ -841,7 +841,7 @@ function drawDimensions(r, isActive = false) {
   const padding = 4 / zoom;
   const borderRadius = 4 / zoom;
 
-  // Width dimension (top of rectangle)
+  // Width dimension (top of box)
   const widthText = `${wMm.toFixed(1)}mm`;
   const widthMetrics = ctx.measureText(widthText);
   const widthX = r.x + r.w / 2;
@@ -860,7 +860,7 @@ function drawDimensions(r, isActive = false) {
   ctx.fillStyle = "white";
   ctx.fillText(widthText, widthX, widthY);
 
-  // Height dimension (right of rectangle)
+  // Height dimension (right of box)
   const heightText = `${hMm.toFixed(1)}mm`;
   const heightMetrics = ctx.measureText(heightText);
   const heightX = r.x + r.w + 15 / zoom;
@@ -885,7 +885,7 @@ function drawDimensions(r, isActive = false) {
 function draw() {
   drawGrid();
 
-  for (const r of rectangles) {
+  for (const r of boxes) {
     drawRectangle(r, r === selected);
     // Show dimensions based on global toggle or active manipulation
     const isActiveManipulation = (r === selected && (resizing || dragging));
@@ -897,8 +897,8 @@ function hitTest(screenX, screenY) {
   // Convert screen coordinates to world coordinates
   const world = screenToWorld(screenX, screenY);
 
-  for (let i = rectangles.length - 1; i >= 0; i--) {
-    const r = rectangles[i];
+  for (let i = boxes.length - 1; i >= 0; i--) {
+    const r = boxes[i];
     if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
       return r;
     }
@@ -1045,7 +1045,7 @@ function onDoubleClick(e) {
   const r = hitTest(screenX, screenY);
 
   if (r) {
-    // Select the rectangle and show its dimension popup
+    // Select the box and show its dimension popup
     selected = r;
     selectRectangle(r);
     showRectanglePopup();
@@ -1057,7 +1057,7 @@ function onDoubleClick(e) {
 addBtn.onclick = () => {
   const color = colorPicker.value || getRandomModernColor();
 
-  // Create rectangles in world coordinates (within the workspace)
+  // Create boxes in world coordinates (within the workspace)
   const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
   const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
 
@@ -1068,7 +1068,7 @@ addBtn.onclick = () => {
     h: 15 + Math.random() * 50,  // 15mm to 65mm tall
     color
   };
-  rectangles.push(r);
+  boxes.push(r);
   selectRectangle(r);
   animateRectangleCreation(r);
 };
@@ -1094,7 +1094,7 @@ deleteBtn.onclick = () => {
     if (progress < 1) {
       requestAnimationFrame(fadeOut);
     } else {
-      rectangles = rectangles.filter(r => r !== rectToDelete);
+      boxes = boxes.filter(r => r !== rectToDelete);
       selected = null;
       draw();
       updateInfo();
@@ -1128,7 +1128,7 @@ function hideWorkspacePopup() {
 function showRectanglePopup() {
   if (!selected) return;
 
-  // Update inputs with current rectangle dimensions
+  // Update inputs with current box dimensions
   const wMm = pixelsToMm(selected.w);
   const hMm = pixelsToMm(selected.h);
   rectangleWidthInput.value = wMm.toFixed(1);
@@ -1186,7 +1186,7 @@ applyRectangleBtn.onclick = () => {
     selected.w = newWidth * BASE_SCALE;
     selected.h = newHeight * BASE_SCALE;
 
-    // Keep rectangle within workspace bounds
+    // Keep box within workspace bounds
     const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
     const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
 
@@ -1337,7 +1337,7 @@ setTimeout(() => {
   initializeApp();
 }, 100);
 
-// Add a welcome rectangle
+// Add a welcome box
 setTimeout(() => {
   const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
   const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
@@ -1349,7 +1349,7 @@ setTimeout(() => {
     h: 40, // 40mm tall
     color: "#667eea"
   };
-  rectangles.push(welcomeRect);
+  boxes.push(welcomeRect);
   selectRectangle(welcomeRect);
   animateRectangleCreation(welcomeRect);
 }, 500);
