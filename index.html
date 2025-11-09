@@ -293,97 +293,102 @@
     position: absolute;
     bottom: 20px;
     right: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
     z-index: 100;
+    opacity: 0.3;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
   }
 
-  .zoom-widget {
+  .zoom-controls:hover {
+    opacity: 1;
+  }
+
+  .zoom-controls.active {
+    opacity: 1;
+  }
+
+  .zoom-controls.hidden {
+    opacity: 0.1;
+    pointer-events: none;
+  }
+
+  .compact-controls {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 20px;
+    padding: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.3);
     display: flex;
-    flex-direction: column;
     align-items: center;
     gap: 8px;
-    min-width: 120px;
+    max-width: 200px;
   }
 
-  .zoom-buttons {
-    display: flex;
-    gap: 4px;
-  }
-
-  .zoom-btn {
-    width: 36px;
-    height: 36px;
+  .compact-btn {
+    width: 28px;
+    height: 28px;
     border: none;
-    border-radius: 8px;
+    border-radius: 50%;
     background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
     color: #374151;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+    flex-shrink: 0;
   }
 
-  .zoom-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  .compact-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
   }
 
-  .zoom-btn:active {
-    transform: translateY(0);
+  .compact-btn:active {
+    transform: scale(0.95);
   }
 
-  .zoom-level {
-    font-size: 12px;
+  .control-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 40px;
+  }
+
+  .control-info span {
+    font-size: 10px;
     font-weight: 600;
     color: #333;
-    text-align: center;
-  }
-
-  .scale-info {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    padding: 10px 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    font-size: 12px;
-    font-weight: 600;
-    color: #333;
-    text-align: center;
-    min-width: 120px;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .workspace-info {
     background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
     color: white;
-    border-radius: 50px;
-    padding: 10px 20px;
-    font-size: 14px;
+    border-radius: 12px;
+    padding: 4px 8px;
+    font-size: 9px;
     font-weight: 600;
     text-align: center;
-    margin-top: 4px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.3s ease;
     user-select: none;
     border: none;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .workspace-info:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 
   .workspace-controls {
@@ -630,17 +635,14 @@
   <canvas id="canvas" width="1200" height="600" class="fade-in"></canvas>
 
   <div class="zoom-controls fade-in">
-    <div class="zoom-widget">
-      <div class="zoom-buttons">
-        <button id="zoomOut" class="zoom-btn">−</button>
-        <button id="zoomIn" class="zoom-btn">+</button>
+    <div class="compact-controls">
+      <button id="zoomOut" class="compact-btn">−</button>
+      <div class="control-info">
+        <span id="zoomLevel">100%</span>
+        <span id="scaleRatio">1:1</span>
       </div>
-      <div id="zoomLevel" class="zoom-level">100%</div>
-    </div>
-
-    <div class="scale-info">
-      <div id="scaleRatio">1:1</div>
-      <div class="workspace-info">900×450mm space</div>
+      <button id="zoomIn" class="compact-btn">+</button>
+      <div class="workspace-info">900×450mm</div>
     </div>
   </div>
 </div>
@@ -1790,6 +1792,37 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+// Auto-hide controls management
+let controlsHideTimeout = null;
+const zoomControlsElement = document.querySelector('.zoom-controls');
+
+function showControls() {
+  zoomControlsElement.classList.remove('hidden');
+  zoomControlsElement.classList.add('active');
+
+  // Clear existing timeout
+  if (controlsHideTimeout) {
+    clearTimeout(controlsHideTimeout);
+  }
+
+  // Set new timeout to hide controls after 3 seconds of inactivity
+  controlsHideTimeout = setTimeout(() => {
+    hideControls();
+  }, 3000);
+}
+
+function hideControls() {
+  zoomControlsElement.classList.remove('active');
+  // Don't fully hide if hovering
+  if (!zoomControlsElement.matches(':hover')) {
+    zoomControlsElement.classList.add('hidden');
+  }
+}
+
+function onUserActivity() {
+  showControls();
+}
+
 // Initialize the application
 function initializeApp() {
   // Center the workspace in the canvas view
@@ -1802,6 +1835,32 @@ function initializeApp() {
   updateZoomDisplay();
   draw();
   updateInfo();
+
+  // Initialize auto-hide behavior
+  showControls();
+
+  // Add event listeners for user activity
+  canvas.addEventListener('mousemove', onUserActivity);
+  canvas.addEventListener('mousedown', onUserActivity);
+  canvas.addEventListener('wheel', onUserActivity);
+  document.addEventListener('keydown', onUserActivity);
+
+  // Show controls when hovering over them
+  zoomControlsElement.addEventListener('mouseenter', () => {
+    zoomControlsElement.classList.remove('hidden');
+    zoomControlsElement.classList.add('active');
+    if (controlsHideTimeout) {
+      clearTimeout(controlsHideTimeout);
+    }
+  });
+
+  // Start hide timer when leaving controls
+  zoomControlsElement.addEventListener('mouseleave', () => {
+    zoomControlsElement.classList.remove('active');
+    controlsHideTimeout = setTimeout(() => {
+      hideControls();
+    }, 1000);
+  });
 }
 
 // Initial draw with welcome animation
