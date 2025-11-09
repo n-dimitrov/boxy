@@ -173,6 +173,66 @@
     align-items: center;
   }
 
+  .opacity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 2px solid rgba(107, 114, 128, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .opacity-controls:hover {
+    border-color: rgba(107, 114, 128, 0.5);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .opacity-controls label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    min-width: 50px;
+  }
+
+  .opacity-controls input[type="range"] {
+    width: 80px;
+    height: 4px;
+    border-radius: 2px;
+    background: #d1d5db;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .opacity-controls input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .opacity-controls input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .opacity-controls span {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 35px;
+    text-align: center;
+  }
+
   @media (max-width: 768px) {
     .header h1 {
       font-size: 1.5rem;
@@ -509,6 +569,34 @@
     background: rgba(148, 163, 184, 0.3);
     transform: translateY(-1px);
   }
+
+  .layer-controls {
+    display: flex;
+    gap: 6px;
+    margin-left: 8px;
+  }
+
+  .btn-layer {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
+    color: #374151;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-layer:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(107, 114, 128, 0.2);
+  }
+
+  .workspace-input-group {
+    align-items: center;
+  }
 </style>
 </head>
 <body>
@@ -530,6 +618,12 @@
   </div>
 
   <button id="toggleDimensions" class="btn btn-primary">Show</button>
+
+  <div class="opacity-controls">
+    <label for="dimensionOpacity">Opacity:</label>
+    <input type="range" id="dimensionOpacity" min="0.1" max="1.0" step="0.1" value="0.9">
+    <span id="opacityValue">90%</span>
+  </div>
 </div>
 
 <div class="canvas-container">
@@ -577,7 +671,7 @@
 <!-- Box Dimension Popup -->
 <div id="rectanglePopup" class="workspace-popup">
   <div class="workspace-modal">
-    <h3>📏 Box Dimensions</h3>
+    <h3>📏 Box Properties</h3>
     <div class="workspace-form">
       <div class="workspace-input-group">
         <label>Width:</label>
@@ -588,6 +682,19 @@
         <label>Height:</label>
         <input type="number" id="rectangleHeight" value="0" min="5" max="5000" step="0.1">
         <span>mm</span>
+      </div>
+      <div class="workspace-input-group">
+        <label>Opacity:</label>
+        <input type="range" id="rectangleOpacity" min="0.1" max="1.0" step="0.05" value="0.7">
+        <span id="rectangleOpacityValue">100%</span>
+      </div>
+      <div class="workspace-input-group">
+        <label>Layer:</label>
+        <input type="number" id="rectangleZIndex" value="0" min="0" max="999">
+        <div class="layer-controls">
+          <button id="bringToFront" class="btn-layer">Top</button>
+          <button id="sendToBack" class="btn-layer">Back</button>
+        </div>
       </div>
       <div class="workspace-buttons">
         <button id="applyRectangle" class="btn-modal primary">Apply Changes</button>
@@ -617,10 +724,17 @@ const workspaceInfo = document.querySelector(".workspace-info");
 
 const rectangleWidthInput = document.getElementById("rectangleWidth");
 const rectangleHeightInput = document.getElementById("rectangleHeight");
+const rectangleOpacitySlider = document.getElementById("rectangleOpacity");
+const rectangleOpacityDisplay = document.getElementById("rectangleOpacityValue");
+const rectangleZIndexInput = document.getElementById("rectangleZIndex");
+const bringToFrontBtn = document.getElementById("bringToFront");
+const sendToBackBtn = document.getElementById("sendToBack");
 const applyRectangleBtn = document.getElementById("applyRectangle");
 const cancelRectangleBtn = document.getElementById("cancelRectangle");
 const rectanglePopup = document.getElementById("rectanglePopup");
 const toggleDimensionsBtn = document.getElementById("toggleDimensions");
+const dimensionOpacitySlider = document.getElementById("dimensionOpacity");
+const opacityValueDisplay = document.getElementById("opacityValue");
 
 let boxes = [];
 let selected = null;
@@ -631,6 +745,7 @@ let zoom = 1.0;
 let panX = 0;
 let panY = 0;
 let showAllDimensions = false; // Global toggle for showing dimensions
+let dimensionOpacity = 0.9; // Configurable opacity for dimension labels (0.0 to 1.0)
 
 const HANDLE_SIZE = 10;
 
@@ -775,9 +890,13 @@ function drawRectangle(r, isSelected = false) {
   ctx.scale(zoom, zoom);
   ctx.translate(panX / zoom, panY / zoom);
 
+  // Apply box opacity
+  const boxOpacity = r.opacity || 1.0;
+  ctx.globalAlpha = boxOpacity;
+
   if (isSelected) {
     // Glow effect for selected box
-    ctx.shadowColor = "rgba(107, 114, 128, 0.4)";
+    ctx.shadowColor = `rgba(107, 114, 128, ${0.4 * boxOpacity})`;
     ctx.shadowBlur = 20 / zoom;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -789,8 +908,8 @@ function drawRectangle(r, isSelected = false) {
 
   // Subtle inner shadow for depth
   const gradient = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
-  gradient.addColorStop(0, "rgba(255, 255, 255, 0.3)");
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0.1)");
+  gradient.addColorStop(0, `rgba(255, 255, 255, ${0.3 * boxOpacity})`);
+  gradient.addColorStop(1, `rgba(0, 0, 0, ${0.1 * boxOpacity})`);
   ctx.fillStyle = gradient;
   ctx.fillRect(r.x, r.y, r.w, r.h);
 
@@ -849,7 +968,7 @@ function drawDimensions(r, isActive = false) {
   const widthY = r.y - 15 / zoom;
 
   // Background for width
-  ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+  ctx.fillStyle = `rgba(37, 99, 235, ${dimensionOpacity})`;
   ctx.fillRect(
     widthX - widthMetrics.width / 2 - padding,
     widthY - fontSize / 2 - padding,
@@ -858,7 +977,7 @@ function drawDimensions(r, isActive = false) {
   );
 
   // Width text
-  ctx.fillStyle = "white";
+  ctx.fillStyle = `rgba(255, 255, 255, ${dimensionOpacity})`;
   ctx.fillText(widthText, widthX, widthY);
 
   // Height dimension (right of box)
@@ -868,7 +987,7 @@ function drawDimensions(r, isActive = false) {
   const heightY = r.y + r.h / 2;
 
   // Background for height
-  ctx.fillStyle = "rgba(37, 99, 235, 0.9)";
+  ctx.fillStyle = `rgba(37, 99, 235, ${dimensionOpacity})`;
   ctx.fillRect(
     heightX - heightMetrics.width / 2 - padding,
     heightY - fontSize / 2 - padding,
@@ -877,7 +996,7 @@ function drawDimensions(r, isActive = false) {
   );
 
   // Height text
-  ctx.fillStyle = "white";
+  ctx.fillStyle = `rgba(255, 255, 255, ${dimensionOpacity})`;
   ctx.fillText(heightText, heightX, heightY);
 
   ctx.restore();
@@ -1162,7 +1281,10 @@ function drawDistanceIndicators(r) {
 function draw() {
   drawGrid();
 
-  for (const r of boxes) {
+  // Sort boxes by zIndex for proper layering (lower zIndex drawn first)
+  const sortedBoxes = [...boxes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+  for (const r of sortedBoxes) {
     drawRectangle(r, r === selected);
     // Show dimensions based on global toggle or active manipulation
     const isActiveManipulation = (r === selected && (resizing || dragging));
@@ -1177,8 +1299,10 @@ function hitTest(screenX, screenY) {
   // Convert screen coordinates to world coordinates
   const world = screenToWorld(screenX, screenY);
 
-  for (let i = boxes.length - 1; i >= 0; i--) {
-    const r = boxes[i];
+  // Sort boxes by zIndex in descending order (highest zIndex first) for hit testing
+  const sortedBoxes = [...boxes].sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0));
+
+  for (const r of sortedBoxes) {
     if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
       return r;
     }
@@ -1341,12 +1465,17 @@ addBtn.onclick = () => {
   const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
   const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
 
+  // Get max z-index of existing boxes to place new box at same level
+  const maxZ = boxes.length > 0 ? Math.max(...boxes.map(b => b.zIndex || 0)) : 0;
+
   const r = {
     x: Math.random() * (workspaceWidth - 50) + 10,
     y: Math.random() * (workspaceHeight - 30) + 10,
     w: 20 + Math.random() * 80,  // 20mm to 100mm wide
     h: 15 + Math.random() * 50,  // 15mm to 65mm tall
-    color
+    color,
+    opacity: 0.7,  // Individual box opacity (70% by default)
+    zIndex: maxZ  // Layer ordering (equal to max existing z-index)
   };
   boxes.push(r);
   selectRectangle(r);
@@ -1411,8 +1540,14 @@ function showRectanglePopup() {
   // Update inputs with current box dimensions
   const wMm = pixelsToMm(selected.w);
   const hMm = pixelsToMm(selected.h);
+  const boxOpacity = selected.opacity || 1.0;
+  const boxZIndex = selected.zIndex || 0;
+
   rectangleWidthInput.value = wMm.toFixed(1);
   rectangleHeightInput.value = hMm.toFixed(1);
+  rectangleOpacitySlider.value = boxOpacity.toFixed(2);
+  rectangleOpacityDisplay.textContent = `${Math.round(boxOpacity * 100)}%`;
+  rectangleZIndexInput.value = boxZIndex;
 
   rectanglePopup.classList.add('show');
 }
@@ -1431,6 +1566,57 @@ toggleDimensionsBtn.onclick = () => {
   toggleDimensionsBtn.textContent = showAllDimensions ? "Hide" : "Show";
   draw();
 };
+
+// Dimension opacity control
+dimensionOpacitySlider.addEventListener("input", () => {
+  dimensionOpacity = parseFloat(dimensionOpacitySlider.value);
+  const percentage = Math.round(dimensionOpacity * 100);
+  opacityValueDisplay.textContent = `${percentage}%`;
+  draw();
+});
+
+// Rectangle opacity control in popup
+rectangleOpacitySlider.addEventListener("input", () => {
+  const opacity = parseFloat(rectangleOpacitySlider.value);
+  const percentage = Math.round(opacity * 100);
+  rectangleOpacityDisplay.textContent = `${percentage}%`;
+
+  // Update selected box opacity in real-time
+  if (selected) {
+    selected.opacity = opacity;
+    draw();
+  }
+});
+
+// Layer ordering controls
+bringToFrontBtn.onclick = () => {
+  if (!selected) return;
+
+  // Find highest zIndex and set selected box to be above it
+  const maxZ = Math.max(...boxes.map(b => b.zIndex || 0));
+  selected.zIndex = maxZ + 1;
+  rectangleZIndexInput.value = selected.zIndex;
+  draw();
+};
+
+sendToBackBtn.onclick = () => {
+  if (!selected) return;
+
+  // Find lowest zIndex and set selected box to be below it
+  const minZ = Math.min(...boxes.map(b => b.zIndex || 0));
+  selected.zIndex = Math.max(0, minZ - 1);
+  rectangleZIndexInput.value = selected.zIndex;
+  draw();
+};
+
+// Z-index input change
+rectangleZIndexInput.addEventListener("input", () => {
+  if (!selected) return;
+
+  const zIndex = parseInt(rectangleZIndexInput.value) || 0;
+  selected.zIndex = Math.max(0, zIndex);
+  draw();
+});
 
 applyWorkspaceBtn.onclick = () => {
   const newWidth = parseInt(workspaceWidthInput.value);
@@ -1460,11 +1646,17 @@ applyRectangleBtn.onclick = () => {
 
   const newWidth = parseFloat(rectangleWidthInput.value);
   const newHeight = parseFloat(rectangleHeightInput.value);
+  const newOpacity = parseFloat(rectangleOpacitySlider.value);
+  const newZIndex = parseInt(rectangleZIndexInput.value) || 0;
 
   if (newWidth >= 5 && newWidth <= 5000 && newHeight >= 5 && newHeight <= 5000) {
     // Convert millimeters back to pixels
     selected.w = newWidth * BASE_SCALE;
     selected.h = newHeight * BASE_SCALE;
+
+    // Apply opacity and z-index
+    selected.opacity = newOpacity;
+    selected.zIndex = Math.max(0, newZIndex);
 
     // Keep box within workspace bounds
     const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
@@ -1627,7 +1819,9 @@ setTimeout(() => {
     y: workspaceHeight / 2 - 20, // 150mm from top (centered)
     w: 60, // 60mm wide
     h: 40, // 40mm tall
-    color: "#6b7280"
+    color: "#6b7280",
+    opacity: 0.7,  // Individual box opacity (70% default)
+    zIndex: 0  // Layer ordering
   };
   boxes.push(welcomeRect);
   selectRectangle(welcomeRect);
