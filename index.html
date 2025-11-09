@@ -149,6 +149,7 @@
     align-items: center;
     flex: 1;
     padding: 20px;
+    position: relative;
   }
 
   #canvas {
@@ -237,6 +238,148 @@
       opacity: 1;
     }
   }
+
+  .zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+  }
+
+  .zoom-widget {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+  }
+
+  .zoom-buttons {
+    display: flex;
+    gap: 4px;
+  }
+
+  .zoom-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  }
+
+  .zoom-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  .zoom-btn:active {
+    transform: translateY(0);
+  }
+
+  .zoom-level {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+  }
+
+  .scale-info {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .workspace-info {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(67, 233, 123, 0.2);
+  }
+
+  .workspace-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .workspace-controls:hover {
+    border-color: rgba(102, 126, 234, 0.5);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .workspace-controls label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+  }
+
+  .workspace-controls input {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .workspace-controls span {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .btn-workspace {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(67, 233, 123, 0.2);
+  }
+
+  .btn-workspace:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
+  }
 </style>
 </head>
 <body>
@@ -257,11 +400,37 @@
     <input type="color" id="colorPicker" value="#667eea">
   </div>
 
+  <div class="controls-group">
+    <div class="workspace-controls">
+      <label>📐 Workspace:</label>
+      <input type="number" id="workspaceWidth" value="400" min="10" max="5000" style="width: 60px;">
+      <span>×</span>
+      <input type="number" id="workspaceHeight" value="300" min="10" max="5000" style="width: 60px;">
+      <span>mm</span>
+      <button id="applyWorkspace" class="btn-workspace">Apply</button>
+    </div>
+  </div>
+
   <div id="info">No selection</div>
 </div>
 
 <div class="canvas-container">
   <canvas id="canvas" width="800" height="500" class="fade-in"></canvas>
+
+  <div class="zoom-controls fade-in">
+    <div class="zoom-widget">
+      <div class="zoom-buttons">
+        <button id="zoomOut" class="zoom-btn">−</button>
+        <button id="zoomIn" class="zoom-btn">+</button>
+      </div>
+      <div id="zoomLevel" class="zoom-level">100%</div>
+    </div>
+
+    <div class="scale-info">
+      <div id="scaleRatio">1:1</div>
+      <div class="workspace-info">400×300mm space</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -272,17 +441,33 @@ const addBtn = document.getElementById("addRect");
 const deleteBtn = document.getElementById("deleteRect");
 const colorPicker = document.getElementById("colorPicker");
 const info = document.getElementById("info");
+const zoomInBtn = document.getElementById("zoomIn");
+const zoomOutBtn = document.getElementById("zoomOut");
+const zoomLevelDisplay = document.getElementById("zoomLevel");
+const scaleRatioDisplay = document.getElementById("scaleRatio");
+const workspaceWidthInput = document.getElementById("workspaceWidth");
+const workspaceHeightInput = document.getElementById("workspaceHeight");
+const applyWorkspaceBtn = document.getElementById("applyWorkspace");
 
 let rectangles = [];
 let selected = null;
 let dragOffset = { x: 0, y: 0 };
 let resizing = false;
+let zoom = 1.0;
+let panX = 0;
+let panY = 0;
 
 const HANDLE_SIZE = 10;
-const GRID_SIZE = 20; // px
 
-// px → mm (assuming 96 dpi)
-const PX_TO_MM = 25.4 / 96;
+// Real-world scale settings (all in millimeters)
+let WORKSPACE_WIDTH_MM = 400; // 400 millimeters (40cm)
+let WORKSPACE_HEIGHT_MM = 300; // 300 millimeters (30cm)
+const BASE_SCALE = 1; // 1 pixel per millimeter at 100% zoom
+const GRID_SIZE_MM = 10; // 10mm grid lines (1cm)
+
+// Zoom levels
+const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0];
+let currentZoomIndex = 3; // Start at 100% (index 3)
 
 // Modern color palette
 const modernColors = [
@@ -291,7 +476,63 @@ const modernColors = [
   "#ffecd2", "#fcb69f", "#a8edea", "#fed6e3"
 ];
 
-// --- Helpers ---
+// --- Coordinate conversion helpers ---
+
+function mmToPixels(millimeters) {
+  return millimeters * BASE_SCALE * zoom;
+}
+
+function pixelsToMm(pixels) {
+  return pixels / (BASE_SCALE * zoom);
+}
+
+function screenToWorld(screenX, screenY) {
+  return {
+    x: (screenX - panX) / zoom,
+    y: (screenY - panY) / zoom
+  };
+}
+
+function worldToScreen(worldX, worldY) {
+  return {
+    x: worldX * zoom + panX,
+    y: worldY * zoom + panY
+  };
+}
+
+// --- Zoom and scale helpers ---
+
+function updateZoomDisplay() {
+  const zoomPercent = Math.round(zoom * 100);
+  zoomLevelDisplay.textContent = `${zoomPercent}%`;
+
+  // For millimeters, 1:1 means 1 pixel = 1mm, so the ratio is zoom dependent
+  const scale = Math.round(1 / zoom);
+  scaleRatioDisplay.textContent = scale === 1 ? `1:1` : `1:${scale}`;
+
+  // Update button states
+  zoomOutBtn.disabled = currentZoomIndex <= 0;
+  zoomInBtn.disabled = currentZoomIndex >= ZOOM_LEVELS.length - 1;
+}
+
+function setZoom(newZoom) {
+  // Center the zoom on the canvas center
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // Calculate world position of center before zoom
+  const worldCenter = screenToWorld(centerX, centerY);
+
+  zoom = newZoom;
+
+  // Recalculate pan to keep the center point stable
+  const newScreen = worldToScreen(worldCenter.x, worldCenter.y);
+  panX += centerX - newScreen.x;
+  panY += centerY - newScreen.y;
+
+  updateZoomDisplay();
+  draw();
+}
 
 function getRandomModernColor() {
   return modernColors[Math.floor(Math.random() * modernColors.length)];
@@ -308,37 +549,61 @@ function drawGrid() {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Subtle grid lines
-  ctx.strokeStyle = "rgba(148, 163, 184, 0.2)";
-  ctx.lineWidth = 1;
+  // Apply zoom and pan transform
+  ctx.save();
+  ctx.scale(zoom, zoom);
+  ctx.translate(panX / zoom, panY / zoom);
 
-  // vertical lines
-  for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+  // Calculate grid spacing in world coordinates
+  const gridSpacing = mmToPixels(GRID_SIZE_MM) / zoom;
+
+  // Draw workspace boundary
+  const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
+  const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
+
+  // Workspace background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, workspaceWidth, workspaceHeight);
+
+  // Workspace border
+  ctx.strokeStyle = "rgba(102, 126, 234, 0.5)";
+  ctx.lineWidth = 2 / zoom;
+  ctx.strokeRect(0, 0, workspaceWidth, workspaceHeight);
+
+  // Grid lines (10mm spacing = 1cm)
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.3)";
+  ctx.lineWidth = 0.5 / zoom;
+
+  // Vertical lines
+  for (let x = 0; x <= workspaceWidth; x += gridSpacing) {
     ctx.beginPath();
-    ctx.moveTo(x + 0.5, 0);
-    ctx.lineTo(x + 0.5, canvas.height);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, workspaceHeight);
     ctx.stroke();
   }
 
-  // horizontal lines
-  for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+  // Horizontal lines
+  for (let y = 0; y <= workspaceHeight; y += gridSpacing) {
     ctx.beginPath();
-    ctx.moveTo(0, y + 0.5);
-    ctx.lineTo(canvas.width, y + 0.5);
+    ctx.moveTo(0, y);
+    ctx.lineTo(workspaceWidth, y);
     ctx.stroke();
   }
 
   ctx.restore();
+  ctx.restore();
 }
 
 function drawRectangle(r, isSelected = false) {
-  // Modern rectangle with gradient and shadow
+  // Apply zoom and pan transform for rectangles
   ctx.save();
+  ctx.scale(zoom, zoom);
+  ctx.translate(panX / zoom, panY / zoom);
 
   if (isSelected) {
     // Glow effect for selected rectangle
     ctx.shadowColor = "rgba(102, 126, 234, 0.4)";
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 20 / zoom;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
   }
@@ -354,33 +619,30 @@ function drawRectangle(r, isSelected = false) {
   ctx.fillStyle = gradient;
   ctx.fillRect(r.x, r.y, r.w, r.h);
 
-  ctx.restore();
-
   if (isSelected) {
     // Modern selection border
-    ctx.save();
     ctx.strokeStyle = "#667eea";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 4]);
-    ctx.lineDashOffset = Date.now() / 100 % 12; // Animated dashes
-    ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
-    ctx.restore();
+    ctx.lineWidth = 3 / zoom;
+    ctx.setLineDash([8 / zoom, 4 / zoom]);
+    ctx.lineDashOffset = Date.now() / 100 / zoom % 12; // Animated dashes
+    ctx.strokeRect(r.x - 2 / zoom, r.y - 2 / zoom, r.w + 4 / zoom, r.h + 4 / zoom);
 
     // Modern resize handle
-    const handleX = r.x + r.w - HANDLE_SIZE;
-    const handleY = r.y + r.h - HANDLE_SIZE;
+    const handleSize = HANDLE_SIZE / zoom;
+    const handleX = r.x + r.w - handleSize;
+    const handleY = r.y + r.h - handleSize;
 
-    ctx.save();
     ctx.fillStyle = "#667eea";
     ctx.shadowColor = "rgba(102, 126, 234, 0.5)";
-    ctx.shadowBlur = 8;
-    ctx.fillRect(handleX, handleY, HANDLE_SIZE, HANDLE_SIZE);
+    ctx.shadowBlur = 8 / zoom;
+    ctx.fillRect(handleX, handleY, handleSize, handleSize);
 
     // Handle highlight
     ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-    ctx.fillRect(handleX, handleY, HANDLE_SIZE / 2, HANDLE_SIZE / 2);
-    ctx.restore();
+    ctx.fillRect(handleX, handleY, handleSize / 2, handleSize / 2);
   }
+
+  ctx.restore();
 }
 
 function draw() {
@@ -391,10 +653,13 @@ function draw() {
   }
 }
 
-function hitTest(x, y) {
+function hitTest(screenX, screenY) {
+  // Convert screen coordinates to world coordinates
+  const world = screenToWorld(screenX, screenY);
+
   for (let i = rectangles.length - 1; i >= 0; i--) {
     const r = rectangles[i];
-    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+    if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
       return r;
     }
   }
@@ -407,9 +672,12 @@ function updateInfo() {
     info.style.background = "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)";
     return;
   }
-  const wMm = (selected.w * PX_TO_MM).toFixed(1);
-  const hMm = (selected.h * PX_TO_MM).toFixed(1);
-  info.textContent = `📐 ${wMm} mm × ${hMm} mm`;
+  // Convert pixels to millimeters using world coordinates
+  const wMm = pixelsToMm(selected.w);
+  const hMm = pixelsToMm(selected.h);
+
+  // Always show in millimeters
+  info.textContent = `📐 ${wMm.toFixed(1)} mm × ${hMm.toFixed(1)} mm`;
   info.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
 }
 
@@ -470,20 +738,23 @@ function animateRectangleCreation(rect) {
 
 function onMouseDown(e) {
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const r = hitTest(x, y);
+  const screenX = e.clientX - rect.left;
+  const screenY = e.clientY - rect.top;
+  const r = hitTest(screenX, screenY);
 
   if (r) {
     selected = r;
-    if (x >= r.x + r.w - HANDLE_SIZE && y >= r.y + r.h - HANDLE_SIZE) {
+    const world = screenToWorld(screenX, screenY);
+    const handleSize = HANDLE_SIZE / zoom;
+
+    if (world.x >= r.x + r.w - handleSize && world.y >= r.y + r.h - handleSize) {
       resizing = true;
       canvas.style.cursor = "nw-resize";
     } else {
       resizing = false;
       canvas.style.cursor = "move";
-      dragOffset.x = x - r.x;
-      dragOffset.y = y - r.y;
+      dragOffset.x = world.x - r.x;
+      dragOffset.y = world.y - r.y;
     }
   } else {
     selected = null;
@@ -495,14 +766,16 @@ function onMouseDown(e) {
 
 function onMouseMove(e) {
   const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const screenX = e.clientX - rect.left;
+  const screenY = e.clientY - rect.top;
 
   // Update cursor based on hover state
   if (!selected || e.buttons !== 1) {
-    const hoverRect = hitTest(x, y);
+    const hoverRect = hitTest(screenX, screenY);
     if (hoverRect) {
-      if (x >= hoverRect.x + hoverRect.w - HANDLE_SIZE && y >= hoverRect.y + hoverRect.h - HANDLE_SIZE) {
+      const world = screenToWorld(screenX, screenY);
+      const handleSize = HANDLE_SIZE / zoom;
+      if (world.x >= hoverRect.x + hoverRect.w - handleSize && world.y >= hoverRect.y + hoverRect.h - handleSize) {
         canvas.style.cursor = "nw-resize";
       } else {
         canvas.style.cursor = "move";
@@ -514,14 +787,20 @@ function onMouseMove(e) {
 
   if (!selected) return;
 
+  const world = screenToWorld(screenX, screenY);
+
   if (resizing && e.buttons === 1) {
-    selected.w = Math.max(40, x - selected.x);
-    selected.h = Math.max(40, y - selected.y);
+    const minSize = 5; // 5mm minimum size
+    selected.w = Math.max(minSize * BASE_SCALE, world.x - selected.x);
+    selected.h = Math.max(minSize * BASE_SCALE, world.y - selected.y);
     draw();
     updateInfo();
   } else if (!resizing && e.buttons === 1) {
-    selected.x = Math.max(0, Math.min(canvas.width - selected.w, x - dragOffset.x));
-    selected.y = Math.max(0, Math.min(canvas.height - selected.h, y - dragOffset.y));
+    const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
+    const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
+
+    selected.x = Math.max(0, Math.min(workspaceWidth - selected.w, world.x - dragOffset.x));
+    selected.y = Math.max(0, Math.min(workspaceHeight - selected.h, world.y - dragOffset.y));
     draw();
   }
 }
@@ -535,11 +814,16 @@ function onMouseUp() {
 
 addBtn.onclick = () => {
   const color = colorPicker.value || getRandomModernColor();
+
+  // Create rectangles in world coordinates (within the workspace)
+  const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
+  const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
+
   const r = {
-    x: Math.random() * (canvas.width - 120) + 60,
-    y: Math.random() * (canvas.height - 80) + 40,
-    w: 100 + Math.random() * 100,
-    h: 60 + Math.random() * 60,
+    x: Math.random() * (workspaceWidth - 50) + 10,
+    y: Math.random() * (workspaceHeight - 30) + 10,
+    w: 20 + Math.random() * 80,  // 20mm to 100mm wide
+    h: 15 + Math.random() * 50,  // 15mm to 65mm tall
     color
   };
   rectangles.push(r);
@@ -585,6 +869,41 @@ colorPicker.addEventListener("input", () => {
   }
 });
 
+// --- Workspace controls ---
+
+applyWorkspaceBtn.onclick = () => {
+  const newWidth = parseInt(workspaceWidthInput.value);
+  const newHeight = parseInt(workspaceHeightInput.value);
+
+  if (newWidth >= 10 && newWidth <= 5000 && newHeight >= 10 && newHeight <= 5000) {
+    WORKSPACE_WIDTH_MM = newWidth;
+    WORKSPACE_HEIGHT_MM = newHeight;
+
+    // Update workspace info display
+    const workspaceInfo = document.querySelector('.workspace-info');
+    workspaceInfo.textContent = `${WORKSPACE_WIDTH_MM}×${WORKSPACE_HEIGHT_MM}mm space`;
+
+    // Re-center the workspace
+    initializeApp();
+  }
+};
+
+// --- Zoom controls ---
+
+zoomInBtn.onclick = () => {
+  if (currentZoomIndex < ZOOM_LEVELS.length - 1) {
+    currentZoomIndex++;
+    setZoom(ZOOM_LEVELS[currentZoomIndex]);
+  }
+};
+
+zoomOutBtn.onclick = () => {
+  if (currentZoomIndex > 0) {
+    currentZoomIndex--;
+    setZoom(ZOOM_LEVELS[currentZoomIndex]);
+  }
+};
+
 // --- Events ---
 
 canvas.addEventListener("mousedown", onMouseDown);
@@ -620,6 +939,20 @@ canvas.addEventListener("touchend", (e) => {
   canvas.dispatchEvent(mouseEvent);
 });
 
+// Mouse wheel zoom
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -1 : 1;
+
+  if (delta > 0 && currentZoomIndex < ZOOM_LEVELS.length - 1) {
+    currentZoomIndex++;
+    setZoom(ZOOM_LEVELS[currentZoomIndex]);
+  } else if (delta < 0 && currentZoomIndex > 0) {
+    currentZoomIndex--;
+    setZoom(ZOOM_LEVELS[currentZoomIndex]);
+  }
+});
+
 // Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
   if (e.key === "Delete" || e.key === "Backspace") {
@@ -628,22 +961,42 @@ document.addEventListener("keydown", (e) => {
     }
   } else if (e.key === "n" || e.key === "N") {
     addBtn.click();
+  } else if (e.key === "+" || e.key === "=") {
+    zoomInBtn.click();
+  } else if (e.key === "-" || e.key === "_") {
+    zoomOutBtn.click();
   }
 });
 
-// Initial draw with welcome animation
-setTimeout(() => {
+// Initialize the application
+function initializeApp() {
+  // Center the workspace in the canvas view
+  const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE * zoom;
+  const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE * zoom;
+
+  panX = (canvas.width - workspaceWidth) / 2;
+  panY = (canvas.height - workspaceHeight) / 2;
+
+  updateZoomDisplay();
   draw();
   updateInfo();
+}
+
+// Initial draw with welcome animation
+setTimeout(() => {
+  initializeApp();
 }, 100);
 
 // Add a welcome rectangle
 setTimeout(() => {
+  const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
+  const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
+
   const welcomeRect = {
-    x: canvas.width / 2 - 100,
-    y: canvas.height / 2 - 40,
-    w: 200,
-    h: 80,
+    x: workspaceWidth / 2 - 30, // 200mm from left (centered)
+    y: workspaceHeight / 2 - 20, // 150mm from top (centered)
+    w: 60, // 60mm wide
+    h: 40, // 40mm tall
     color: "#667eea"
   };
   rectangles.push(welcomeRect);
