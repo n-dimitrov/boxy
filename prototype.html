@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Boxy – Grid Playground</title>
+<style>
+  body {
+    margin: 0;
+    background: #f5f5f5;
+    font-family: sans-serif;
+  }
+  #toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #ddd;
+  }
+  #toolbar button {
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #canvas {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    display: block;
+    margin: 20px auto;
+  }
+  #info {
+    margin-left: auto;
+    color: #555;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="addRect">Add Rectangle</button>
+  <button id="deleteRect">Delete Selected</button>
+
+  <label>
+    Color:
+    <input type="color" id="colorPicker" value="#ffb3b3">
+  </label>
+
+  <div id="info">No selection</div>
+</div>
+
+<canvas id="canvas" width="800" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const addBtn = document.getElementById("addRect");
+const deleteBtn = document.getElementById("deleteRect");
+const colorPicker = document.getElementById("colorPicker");
+const info = document.getElementById("info");
+
+let rectangles = [];
+let selected = null;
+let dragOffset = { x: 0, y: 0 };
+let resizing = false;
+
+const HANDLE_SIZE = 8;
+const GRID_SIZE = 20; // px
+
+// px → mm (assuming 96 dpi)
+const PX_TO_MM = 25.4 / 96;
+
+// --- Helpers ---
+
+function randomPastelHex() {
+  const r = Math.round(200 + Math.random() * 55);
+  const g = Math.round(200 + Math.random() * 55);
+  const b = Math.round(200 + Math.random() * 55);
+  return "#" + [r, g, b].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+
+function drawGrid() {
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // grid lines
+  ctx.strokeStyle = "#e5e5e5";
+  ctx.lineWidth = 1;
+
+  // vertical lines
+  for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, 0);
+    ctx.lineTo(x + 0.5, canvas.height);
+    ctx.stroke();
+  }
+
+  // horizontal lines
+  for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+    ctx.beginPath();
+    ctx.moveTo(0, y + 0.5);
+    ctx.lineTo(canvas.width, y + 0.5);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function draw() {
+  drawGrid();
+
+  for (const r of rectangles) {
+    ctx.fillStyle = r.color;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+
+    if (r === selected) {
+      // selection border
+      ctx.strokeStyle = "#333333";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+
+      // resize handle
+      ctx.fillStyle = "#333333";
+      ctx.fillRect(
+        r.x + r.w - HANDLE_SIZE,
+        r.y + r.h - HANDLE_SIZE,
+        HANDLE_SIZE,
+        HANDLE_SIZE
+      );
+    }
+  }
+}
+
+function hitTest(x, y) {
+  for (let i = rectangles.length - 1; i >= 0; i--) {
+    const r = rectangles[i];
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+      return r;
+    }
+  }
+  return null;
+}
+
+function updateInfo() {
+  if (!selected) {
+    info.textContent = "No selection";
+    return;
+  }
+  const wMm = (selected.w * PX_TO_MM).toFixed(1);
+  const hMm = (selected.h * PX_TO_MM).toFixed(1);
+  info.textContent = `Selected: ${wMm} mm × ${hMm} mm`;
+}
+
+function selectRectangle(r) {
+  selected = r;
+  draw();
+  updateInfo();
+  if (selected && /^#[0-9a-f]{6}$/i.test(selected.color)) {
+    colorPicker.value = selected.color;
+  }
+}
+
+// --- Mouse handlers ---
+
+function onMouseDown(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const r = hitTest(x, y);
+
+  if (r) {
+    selected = r;
+    if (x >= r.x + r.w - HANDLE_SIZE && y >= r.y + r.h - HANDLE_SIZE) {
+      resizing = true;
+    } else {
+      resizing = false;
+      dragOffset.x = x - r.x;
+      dragOffset.y = y - r.y;
+    }
+  } else {
+    selected = null;
+    resizing = false;
+  }
+  selectRectangle(selected);
+}
+
+function onMouseMove(e) {
+  if (!selected) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  if (resizing && e.buttons === 1) {
+    selected.w = Math.max(20, x - selected.x);
+    selected.h = Math.max(20, y - selected.y);
+    draw();
+    updateInfo();
+  } else if (!resizing && e.buttons === 1) {
+    selected.x = x - dragOffset.x;
+    selected.y = y - dragOffset.y;
+    draw();
+  }
+}
+
+function onMouseUp() {
+  resizing = false;
+}
+
+// --- Toolbar actions ---
+
+addBtn.onclick = () => {
+  const color = colorPicker.value || randomPastelHex();
+  const r = {
+    x: 100,
+    y: 100,
+    w: 120,
+    h: 80,
+    color
+  };
+  rectangles.push(r);
+  selectRectangle(r);
+};
+
+deleteBtn.onclick = () => {
+  if (!selected) return;
+  rectangles = rectangles.filter(r => r !== selected);
+  selected = null;
+  draw();
+  updateInfo();
+};
+
+colorPicker.addEventListener("input", () => {
+  if (selected) {
+    selected.color = colorPicker.value;
+    draw();
+  }
+});
+
+// --- Events ---
+
+canvas.addEventListener("mousedown", onMouseDown);
+canvas.addEventListener("mousemove", onMouseMove);
+canvas.addEventListener("mouseup", onMouseUp);
+canvas.addEventListener("mouseleave", onMouseUp);
+
+// initial draw
+draw();
+updateInfo();
+</script>
+
+</body>
+</html>
