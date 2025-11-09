@@ -894,11 +894,76 @@ function drawDistanceIndicators(r) {
   const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
   const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
 
-  // Calculate distances to workspace edges
-  const distanceLeft = pixelsToMm(r.x);
-  const distanceTop = pixelsToMm(r.y);
-  const distanceRight = pixelsToMm(workspaceWidth - (r.x + r.w));
-  const distanceBottom = pixelsToMm(workspaceHeight - (r.y + r.h));
+  // Helper function to find nearest box that intersects with a line in a specific direction
+  function findNearestBox(direction) {
+    let nearestBox = null;
+    let minDistance = Infinity;
+
+    for (const box of boxes) {
+      if (box === r) continue; // Skip the selected box
+
+      let distance = Infinity;
+      let lineIntersects = false;
+
+      switch (direction) {
+        case 'left':
+          // Cast horizontal line from center of left edge extending leftward
+          // Line y-coordinate: r.y + r.h/2
+          const leftLineY = r.y + r.h / 2;
+          if (box.x + box.w <= r.x) {
+            // Check if this specific horizontal line hits the box
+            if (leftLineY >= box.y && leftLineY <= box.y + box.h) {
+              distance = r.x - (box.x + box.w);
+              lineIntersects = true;
+            }
+          }
+          break;
+        case 'right':
+          // Cast horizontal line from center of right edge extending rightward
+          // Line y-coordinate: r.y + r.h/2
+          const rightLineY = r.y + r.h / 2;
+          if (box.x >= r.x + r.w) {
+            // Check if this specific horizontal line hits the box
+            if (rightLineY >= box.y && rightLineY <= box.y + box.h) {
+              distance = box.x - (r.x + r.w);
+              lineIntersects = true;
+            }
+          }
+          break;
+        case 'top':
+          // Cast vertical line from center of top edge extending upward
+          // Line x-coordinate: r.x + r.w/2
+          const topLineX = r.x + r.w / 2;
+          if (box.y + box.h <= r.y) {
+            // Check if this specific vertical line hits the box
+            if (topLineX >= box.x && topLineX <= box.x + box.w) {
+              distance = r.y - (box.y + box.h);
+              lineIntersects = true;
+            }
+          }
+          break;
+        case 'bottom':
+          // Cast vertical line from center of bottom edge extending downward
+          // Line x-coordinate: r.x + r.w/2
+          const bottomLineX = r.x + r.w / 2;
+          if (box.y >= r.y + r.h) {
+            // Check if this specific vertical line hits the box
+            if (bottomLineX >= box.x && bottomLineX <= box.x + box.w) {
+              distance = box.y - (r.y + r.h);
+              lineIntersects = true;
+            }
+          }
+          break;
+      }
+
+      if (lineIntersects && distance < minDistance) {
+        minDistance = distance;
+        nearestBox = box;
+      }
+    }
+
+    return nearestBox ? { box: nearestBox, distance: minDistance } : null;
+  }
 
   // Style for distance indicators
   const fontSize = Math.max(9, 10 / zoom);
@@ -910,16 +975,21 @@ function drawDistanceIndicators(r) {
   const lineWidth = 1 / zoom;
 
   // Colors for different distance indicators
-  const distanceColor = "rgba(16, 185, 129, 0.9)"; // Green for distances
-  const lineColor = "rgba(16, 185, 129, 0.6)";
+  const boxDistanceColor = "rgba(16, 185, 129, 0.9)"; // Green for box-to-box distances
+  const edgeDistanceColor = "rgba(99, 102, 241, 0.9)"; // Blue for distances to workspace edge
+  const boxLineColor = "rgba(16, 185, 129, 0.6)";
+  const edgeLineColor = "rgba(99, 102, 241, 0.6)";
   const textColor = "white";
 
   // Helper function to draw distance indicator
-  function drawDistance(x1, y1, x2, y2, text, labelX, labelY) {
+  function drawDistance(x1, y1, x2, y2, text, labelX, labelY, isBoxToBox = false) {
+    const currentLineColor = isBoxToBox ? boxLineColor : edgeLineColor;
+    const currentDistanceColor = isBoxToBox ? boxDistanceColor : edgeDistanceColor;
+
     // Draw dashed line with slight glow
-    ctx.shadowColor = lineColor;
+    ctx.shadowColor = currentLineColor;
     ctx.shadowBlur = 2 / zoom;
-    ctx.strokeStyle = lineColor;
+    ctx.strokeStyle = currentLineColor;
     ctx.lineWidth = lineWidth;
     ctx.setLineDash([4 / zoom, 3 / zoom]);
     ctx.beginPath();
@@ -933,7 +1003,7 @@ function drawDistanceIndicators(r) {
     const arrowSize = 3 / zoom;
     const isHorizontal = Math.abs(x2 - x1) > Math.abs(y2 - y1);
 
-    ctx.fillStyle = lineColor;
+    ctx.strokeStyle = currentLineColor;
     if (isHorizontal) {
       // Horizontal line - draw vertical arrows at ends
       // Left arrow
@@ -974,7 +1044,7 @@ function drawDistanceIndicators(r) {
     ctx.shadowOffsetY = 1 / zoom;
 
     // Draw rounded rectangle background (with fallback for older browsers)
-    ctx.fillStyle = distanceColor;
+    ctx.fillStyle = currentDistanceColor;
     ctx.beginPath();
     if (ctx.roundRect) {
       ctx.roundRect(rectX, rectY, rectWidth, rectHeight, 3 / zoom);
@@ -995,36 +1065,95 @@ function drawDistanceIndicators(r) {
     ctx.fillText(text, labelX + 0.5 / zoom, labelY + 0.5 / zoom);
     ctx.fillStyle = textColor;
     ctx.fillText(text, labelX, labelY);
+
+    // Add a small indicator icon to show if this is box-to-box or box-to-edge distance
+    const iconSize = 4 / zoom;
+    const iconX = labelX + textMetrics.width / 2 + padding;
+    const iconY = labelY;
+
+    if (isBoxToBox) {
+      // Small filled square for box-to-box distance
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.fillRect(iconX - iconSize / 2, iconY - iconSize / 2, iconSize, iconSize);
+    } else {
+      // Small filled circle for box-to-edge distance
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.beginPath();
+      ctx.arc(iconX, iconY, iconSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // Left distance indicator
-  if (r.x > 0) {
-    const leftText = `${distanceLeft.toFixed(1)}mm`;
+  const leftNearest = findNearestBox('left');
+  if (leftNearest) {
+    // Distance to nearest box on the left
+    const distanceMm = pixelsToMm(leftNearest.distance);
+    const leftText = `${distanceMm.toFixed(1)}mm`;
     const midY = r.y + r.h / 2;
-    drawDistance(0, midY, r.x, midY, leftText, r.x / 2, midY);
+    const nearestBox = leftNearest.box;
+    drawDistance(nearestBox.x + nearestBox.w, midY, r.x, midY, leftText, nearestBox.x + nearestBox.w + leftNearest.distance / 2, midY, true);
+  } else if (r.x > 0) {
+    // Distance to workspace edge
+    const distanceMm = pixelsToMm(r.x);
+    const leftText = `${distanceMm.toFixed(1)}mm`;
+    const midY = r.y + r.h / 2;
+    drawDistance(0, midY, r.x, midY, leftText, r.x / 2, midY, false);
   }
 
   // Right distance indicator
-  if (r.x + r.w < workspaceWidth) {
-    const rightText = `${distanceRight.toFixed(1)}mm`;
+  const rightNearest = findNearestBox('right');
+  if (rightNearest) {
+    // Distance to nearest box on the right
+    const distanceMm = pixelsToMm(rightNearest.distance);
+    const rightText = `${distanceMm.toFixed(1)}mm`;
+    const midY = r.y + r.h / 2;
+    const nearestBox = rightNearest.box;
+    const startX = r.x + r.w;
+    drawDistance(startX, midY, nearestBox.x, midY, rightText, startX + rightNearest.distance / 2, midY, true);
+  } else if (r.x + r.w < workspaceWidth) {
+    // Distance to workspace edge
+    const distanceMm = pixelsToMm(workspaceWidth - (r.x + r.w));
+    const rightText = `${distanceMm.toFixed(1)}mm`;
     const midY = r.y + r.h / 2;
     const startX = r.x + r.w;
-    drawDistance(startX, midY, workspaceWidth, midY, rightText, startX + (workspaceWidth - startX) / 2, midY);
+    drawDistance(startX, midY, workspaceWidth, midY, rightText, startX + (workspaceWidth - startX) / 2, midY, false);
   }
 
   // Top distance indicator
-  if (r.y > 0) {
-    const topText = `${distanceTop.toFixed(1)}mm`;
+  const topNearest = findNearestBox('top');
+  if (topNearest) {
+    // Distance to nearest box above
+    const distanceMm = pixelsToMm(topNearest.distance);
+    const topText = `${distanceMm.toFixed(1)}mm`;
     const midX = r.x + r.w / 2;
-    drawDistance(midX, 0, midX, r.y, topText, midX, r.y / 2);
+    const nearestBox = topNearest.box;
+    drawDistance(midX, nearestBox.y + nearestBox.h, midX, r.y, topText, midX, nearestBox.y + nearestBox.h + topNearest.distance / 2, true);
+  } else if (r.y > 0) {
+    // Distance to workspace edge
+    const distanceMm = pixelsToMm(r.y);
+    const topText = `${distanceMm.toFixed(1)}mm`;
+    const midX = r.x + r.w / 2;
+    drawDistance(midX, 0, midX, r.y, topText, midX, r.y / 2, false);
   }
 
   // Bottom distance indicator
-  if (r.y + r.h < workspaceHeight) {
-    const bottomText = `${distanceBottom.toFixed(1)}mm`;
+  const bottomNearest = findNearestBox('bottom');
+  if (bottomNearest) {
+    // Distance to nearest box below
+    const distanceMm = pixelsToMm(bottomNearest.distance);
+    const bottomText = `${distanceMm.toFixed(1)}mm`;
+    const midX = r.x + r.w / 2;
+    const nearestBox = bottomNearest.box;
+    const startY = r.y + r.h;
+    drawDistance(midX, startY, midX, nearestBox.y, bottomText, midX, startY + bottomNearest.distance / 2, true);
+  } else if (r.y + r.h < workspaceHeight) {
+    // Distance to workspace edge
+    const distanceMm = pixelsToMm(workspaceHeight - (r.y + r.h));
+    const bottomText = `${distanceMm.toFixed(1)}mm`;
     const midX = r.x + r.w / 2;
     const startY = r.y + r.h;
-    drawDistance(midX, startY, midX, workspaceHeight, bottomText, midX, startY + (workspaceHeight - startY) / 2);
+    drawDistance(midX, startY, midX, workspaceHeight, bottomText, midX, startY + (workspaceHeight - startY) / 2, false);
   }
 
   ctx.restore();
