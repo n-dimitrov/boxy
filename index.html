@@ -88,12 +88,12 @@
 
   .btn-primary {
     background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
-    color: white;
+    color: #374151;
   }
 
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 25px rgba(107, 114, 128, 0.3);
   }
 
   .btn-danger {
@@ -263,7 +263,7 @@
     border: none;
     border-radius: 8px;
     background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
-    color: white;
+    color: #374151;
     font-size: 18px;
     font-weight: 700;
     cursor: pointer;
@@ -848,7 +848,7 @@ function drawDimensions(r, isActive = false) {
   const widthY = r.y - 15 / zoom;
 
   // Background for width
-  ctx.fillStyle = isActive ? "rgba(67, 233, 123, 0.9)" : "rgba(102, 126, 234, 0.9)";
+  ctx.fillStyle = "rgba(107, 114, 128, 0.6)";
   ctx.fillRect(
     widthX - widthMetrics.width / 2 - padding,
     widthY - fontSize / 2 - padding,
@@ -867,7 +867,7 @@ function drawDimensions(r, isActive = false) {
   const heightY = r.y + r.h / 2;
 
   // Background for height
-  ctx.fillStyle = isActive ? "rgba(67, 233, 123, 0.9)" : "rgba(102, 126, 234, 0.9)";
+  ctx.fillStyle = "rgba(107, 114, 128, 0.6)";
   ctx.fillRect(
     heightX - heightMetrics.width / 2 - padding,
     heightY - fontSize / 2 - padding,
