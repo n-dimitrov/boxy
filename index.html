@@ -1629,14 +1629,14 @@ applyWorkspaceBtn.onclick = () => {
     WORKSPACE_HEIGHT_MM = newHeight;
 
     // Update workspace info display
-    workspaceInfo.textContent = `${WORKSPACE_WIDTH_MM}×${WORKSPACE_HEIGHT_MM}mm space`;
+    workspaceInfo.textContent = `${WORKSPACE_WIDTH_MM}×${WORKSPACE_HEIGHT_MM}mm`;
 
     // Re-center the workspace
     initializeApp();
-
-    // Hide popup
-    hideWorkspacePopup();
   }
+
+  // Always close dialog after attempting to apply
+  hideWorkspacePopup();
 };
 
 cancelWorkspaceBtn.onclick = () => {
@@ -1644,7 +1644,10 @@ cancelWorkspaceBtn.onclick = () => {
 };
 
 applyRectangleBtn.onclick = () => {
-  if (!selected) return;
+  if (!selected) {
+    hideRectanglePopup();
+    return;
+  }
 
   const newWidth = parseFloat(rectangleWidthInput.value);
   const newHeight = parseFloat(rectangleHeightInput.value);
@@ -1673,8 +1676,10 @@ applyRectangleBtn.onclick = () => {
 
     draw();
     updateInfo();
-    hideRectanglePopup();
   }
+
+  // Always close dialog after attempting to apply
+  hideRectanglePopup();
 };
 
 cancelRectangleBtn.onclick = () => {
