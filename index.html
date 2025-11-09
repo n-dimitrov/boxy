@@ -325,6 +325,15 @@
     text-align: center;
     margin-top: 4px;
     box-shadow: 0 4px 12px rgba(67, 233, 123, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+  }
+
+  .workspace-info:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(67, 233, 123, 0.3);
+    background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%);
   }
 
   .workspace-controls {
@@ -380,6 +389,136 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
   }
+
+  .workspace-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .workspace-popup.show {
+    display: flex;
+  }
+
+  .workspace-modal {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    min-width: 320px;
+    animation: modalSlideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .workspace-modal h3 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .workspace-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .workspace-input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .workspace-input-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+  }
+
+  .workspace-input-group input {
+    padding: 8px 12px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    width: 80px;
+    transition: border-color 0.2s ease;
+  }
+
+  .workspace-input-group input:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.5);
+  }
+
+  .workspace-input-group span {
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .workspace-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 8px;
+  }
+
+  .btn-modal {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-modal.primary {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+  }
+
+  .btn-modal.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(67, 233, 123, 0.3);
+  }
+
+  .btn-modal.secondary {
+    background: rgba(148, 163, 184, 0.2);
+    color: #64748b;
+  }
+
+  .btn-modal.secondary:hover {
+    background: rgba(148, 163, 184, 0.3);
+    transform: translateY(-1px);
+  }
 </style>
 </head>
 <body>
@@ -400,18 +539,8 @@
     <input type="color" id="colorPicker" value="#667eea">
   </div>
 
-  <div class="controls-group">
-    <div class="workspace-controls">
-      <label>📐 Workspace:</label>
-      <input type="number" id="workspaceWidth" value="400" min="10" max="5000" style="width: 60px;">
-      <span>×</span>
-      <input type="number" id="workspaceHeight" value="300" min="10" max="5000" style="width: 60px;">
-      <span>mm</span>
-      <button id="applyWorkspace" class="btn-workspace">Apply</button>
-    </div>
-  </div>
 
-  <div id="info">No selection</div>
+  <div id="info">✨ Select a rectangle to see options</div>
 </div>
 
 <div class="canvas-container">
@@ -433,6 +562,52 @@
   </div>
 </div>
 
+<!-- Workspace Dimension Popup -->
+<div id="workspacePopup" class="workspace-popup">
+  <div class="workspace-modal">
+    <h3>📐 Workspace Dimensions</h3>
+    <div class="workspace-form">
+      <div class="workspace-input-group">
+        <label>Width:</label>
+        <input type="number" id="workspaceWidth" value="400" min="10" max="5000">
+        <span>mm</span>
+      </div>
+      <div class="workspace-input-group">
+        <label>Height:</label>
+        <input type="number" id="workspaceHeight" value="300" min="10" max="5000">
+        <span>mm</span>
+      </div>
+      <div class="workspace-buttons">
+        <button id="applyWorkspace" class="btn-modal primary">Apply Changes</button>
+        <button id="cancelWorkspace" class="btn-modal secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rectangle Dimension Popup -->
+<div id="rectanglePopup" class="workspace-popup">
+  <div class="workspace-modal">
+    <h3>📏 Rectangle Dimensions</h3>
+    <div class="workspace-form">
+      <div class="workspace-input-group">
+        <label>Width:</label>
+        <input type="number" id="rectangleWidth" value="0" min="5" max="5000" step="0.1">
+        <span>mm</span>
+      </div>
+      <div class="workspace-input-group">
+        <label>Height:</label>
+        <input type="number" id="rectangleHeight" value="0" min="5" max="5000" step="0.1">
+        <span>mm</span>
+      </div>
+      <div class="workspace-buttons">
+        <button id="applyRectangle" class="btn-modal primary">Apply Changes</button>
+        <button id="cancelRectangle" class="btn-modal secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -448,11 +623,21 @@ const scaleRatioDisplay = document.getElementById("scaleRatio");
 const workspaceWidthInput = document.getElementById("workspaceWidth");
 const workspaceHeightInput = document.getElementById("workspaceHeight");
 const applyWorkspaceBtn = document.getElementById("applyWorkspace");
+const cancelWorkspaceBtn = document.getElementById("cancelWorkspace");
+const workspacePopup = document.getElementById("workspacePopup");
+const workspaceInfo = document.querySelector(".workspace-info");
+
+const rectangleWidthInput = document.getElementById("rectangleWidth");
+const rectangleHeightInput = document.getElementById("rectangleHeight");
+const applyRectangleBtn = document.getElementById("applyRectangle");
+const cancelRectangleBtn = document.getElementById("cancelRectangle");
+const rectanglePopup = document.getElementById("rectanglePopup");
 
 let rectangles = [];
 let selected = null;
 let dragOffset = { x: 0, y: 0 };
 let resizing = false;
+let dragging = false;
 let zoom = 1.0;
 let panX = 0;
 let panY = 0;
@@ -479,11 +664,11 @@ const modernColors = [
 // --- Coordinate conversion helpers ---
 
 function mmToPixels(millimeters) {
-  return millimeters * BASE_SCALE * zoom;
+  return millimeters * BASE_SCALE;
 }
 
 function pixelsToMm(pixels) {
-  return pixels / (BASE_SCALE * zoom);
+  return pixels / BASE_SCALE;
 }
 
 function screenToWorld(screenX, screenY) {
@@ -555,7 +740,7 @@ function drawGrid() {
   ctx.translate(panX / zoom, panY / zoom);
 
   // Calculate grid spacing in world coordinates
-  const gridSpacing = mmToPixels(GRID_SIZE_MM) / zoom;
+  const gridSpacing = GRID_SIZE_MM * BASE_SCALE;
 
   // Draw workspace boundary
   const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
@@ -645,11 +830,75 @@ function drawRectangle(r, isSelected = false) {
   ctx.restore();
 }
 
+function drawDimensions(r, isActive = false) {
+  // Only show dimensions for the selected rectangle
+  if (r !== selected) return;
+
+  ctx.save();
+  ctx.scale(zoom, zoom);
+  ctx.translate(panX / zoom, panY / zoom);
+
+  const wMm = pixelsToMm(r.w);
+  const hMm = pixelsToMm(r.h);
+
+  // Style for dimension text
+  const fontSize = Math.max(10, 12 / zoom);
+  ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Background style for dimension labels
+  const padding = 4 / zoom;
+  const borderRadius = 4 / zoom;
+
+  // Width dimension (top of rectangle)
+  const widthText = `${wMm.toFixed(1)}mm`;
+  const widthMetrics = ctx.measureText(widthText);
+  const widthX = r.x + r.w / 2;
+  const widthY = r.y - 15 / zoom;
+
+  // Background for width
+  ctx.fillStyle = isActive ? "rgba(67, 233, 123, 0.9)" : "rgba(102, 126, 234, 0.9)";
+  ctx.fillRect(
+    widthX - widthMetrics.width / 2 - padding,
+    widthY - fontSize / 2 - padding,
+    widthMetrics.width + padding * 2,
+    fontSize + padding * 2
+  );
+
+  // Width text
+  ctx.fillStyle = "white";
+  ctx.fillText(widthText, widthX, widthY);
+
+  // Height dimension (right of rectangle)
+  const heightText = `${hMm.toFixed(1)}mm`;
+  const heightMetrics = ctx.measureText(heightText);
+  const heightX = r.x + r.w + 15 / zoom;
+  const heightY = r.y + r.h / 2;
+
+  // Background for height
+  ctx.fillStyle = isActive ? "rgba(67, 233, 123, 0.9)" : "rgba(102, 126, 234, 0.9)";
+  ctx.fillRect(
+    heightX - heightMetrics.width / 2 - padding,
+    heightY - fontSize / 2 - padding,
+    heightMetrics.width + padding * 2,
+    fontSize + padding * 2
+  );
+
+  // Height text
+  ctx.fillStyle = "white";
+  ctx.fillText(heightText, heightX, heightY);
+
+  ctx.restore();
+}
+
 function draw() {
   drawGrid();
 
   for (const r of rectangles) {
     drawRectangle(r, r === selected);
+    // Show dimensions for selected rectangle, with active state during manipulation
+    drawDimensions(r, resizing || dragging);
   }
 }
 
@@ -668,17 +917,19 @@ function hitTest(screenX, screenY) {
 
 function updateInfo() {
   if (!selected) {
-    info.textContent = "✨ Select a rectangle to see details";
+    info.textContent = "✨ Select a rectangle to see dimensions";
     info.style.background = "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)";
+    info.style.cursor = "default";
     return;
   }
-  // Convert pixels to millimeters using world coordinates
+
+  // Convert pixels to millimeters and show current dimensions
   const wMm = pixelsToMm(selected.w);
   const hMm = pixelsToMm(selected.h);
-
-  // Always show in millimeters
   info.textContent = `📐 ${wMm.toFixed(1)} mm × ${hMm.toFixed(1)} mm`;
   info.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  info.style.cursor = "pointer";
+  info.title = "Click to edit dimensions";
 }
 
 function selectRectangle(r) {
@@ -749,9 +1000,11 @@ function onMouseDown(e) {
 
     if (world.x >= r.x + r.w - handleSize && world.y >= r.y + r.h - handleSize) {
       resizing = true;
+      dragging = false;
       canvas.style.cursor = "nw-resize";
     } else {
       resizing = false;
+      dragging = true;
       canvas.style.cursor = "move";
       dragOffset.x = world.x - r.x;
       dragOffset.y = world.y - r.y;
@@ -759,6 +1012,7 @@ function onMouseDown(e) {
   } else {
     selected = null;
     resizing = false;
+    dragging = false;
     canvas.style.cursor = "default";
   }
   selectRectangle(selected);
@@ -807,6 +1061,7 @@ function onMouseMove(e) {
 
 function onMouseUp() {
   resizing = false;
+  dragging = false;
   canvas.style.cursor = "default";
 }
 
@@ -869,7 +1124,47 @@ colorPicker.addEventListener("input", () => {
   }
 });
 
-// --- Workspace controls ---
+// --- Popup controls ---
+
+function showWorkspacePopup() {
+  // Update inputs with current values
+  workspaceWidthInput.value = WORKSPACE_WIDTH_MM;
+  workspaceHeightInput.value = WORKSPACE_HEIGHT_MM;
+
+  workspacePopup.classList.add('show');
+}
+
+function hideWorkspacePopup() {
+  workspacePopup.classList.remove('show');
+}
+
+function showRectanglePopup() {
+  if (!selected) return;
+
+  // Update inputs with current rectangle dimensions
+  const wMm = pixelsToMm(selected.w);
+  const hMm = pixelsToMm(selected.h);
+  rectangleWidthInput.value = wMm.toFixed(1);
+  rectangleHeightInput.value = hMm.toFixed(1);
+
+  rectanglePopup.classList.add('show');
+}
+
+function hideRectanglePopup() {
+  rectanglePopup.classList.remove('show');
+}
+
+workspaceInfo.onclick = () => {
+  showWorkspacePopup();
+};
+
+// Add click handler for toolbar dimensions
+info.onclick = (e) => {
+  e.stopPropagation();
+  if (selected && info.style.cursor === "pointer") {
+    showRectanglePopup();
+  }
+};
 
 applyWorkspaceBtn.onclick = () => {
   const newWidth = parseInt(workspaceWidthInput.value);
@@ -880,11 +1175,62 @@ applyWorkspaceBtn.onclick = () => {
     WORKSPACE_HEIGHT_MM = newHeight;
 
     // Update workspace info display
-    const workspaceInfo = document.querySelector('.workspace-info');
     workspaceInfo.textContent = `${WORKSPACE_WIDTH_MM}×${WORKSPACE_HEIGHT_MM}mm space`;
 
     // Re-center the workspace
     initializeApp();
+
+    // Hide popup
+    hideWorkspacePopup();
+  }
+};
+
+cancelWorkspaceBtn.onclick = () => {
+  hideWorkspacePopup();
+};
+
+applyRectangleBtn.onclick = () => {
+  if (!selected) return;
+
+  const newWidth = parseFloat(rectangleWidthInput.value);
+  const newHeight = parseFloat(rectangleHeightInput.value);
+
+  if (newWidth >= 5 && newWidth <= 5000 && newHeight >= 5 && newHeight <= 5000) {
+    // Convert millimeters back to pixels
+    selected.w = newWidth * BASE_SCALE;
+    selected.h = newHeight * BASE_SCALE;
+
+    // Keep rectangle within workspace bounds
+    const workspaceWidth = WORKSPACE_WIDTH_MM * BASE_SCALE;
+    const workspaceHeight = WORKSPACE_HEIGHT_MM * BASE_SCALE;
+
+    if (selected.x + selected.w > workspaceWidth) {
+      selected.x = workspaceWidth - selected.w;
+    }
+    if (selected.y + selected.h > workspaceHeight) {
+      selected.y = workspaceHeight - selected.h;
+    }
+
+    draw();
+    updateInfo();
+    hideRectanglePopup();
+  }
+};
+
+cancelRectangleBtn.onclick = () => {
+  hideRectanglePopup();
+};
+
+// Close popups when clicking outside modal
+workspacePopup.onclick = (e) => {
+  if (e.target === workspacePopup) {
+    hideWorkspacePopup();
+  }
+};
+
+rectanglePopup.onclick = (e) => {
+  if (e.target === rectanglePopup) {
+    hideRectanglePopup();
   }
 };
 
@@ -955,6 +1301,23 @@ canvas.addEventListener("wheel", (e) => {
 
 // Keyboard shortcuts
 document.addEventListener("keydown", (e) => {
+  // Close popups with Escape key
+  if (e.key === 'Escape') {
+    if (workspacePopup.classList.contains('show')) {
+      hideWorkspacePopup();
+      return;
+    }
+    if (rectanglePopup.classList.contains('show')) {
+      hideRectanglePopup();
+      return;
+    }
+  }
+
+  // Skip other shortcuts if any popup is open
+  if (workspacePopup.classList.contains('show') || rectanglePopup.classList.contains('show')) {
+    return;
+  }
+
   if (e.key === "Delete" || e.key === "Backspace") {
     if (selected) {
       deleteBtn.click();
